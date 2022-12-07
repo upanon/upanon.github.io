@@ -164,6 +164,15 @@
 
 		}
 
+		function addDays( date, days ) {
+
+			var result = new Date( date );
+			result.setDate( result.getDate() + days );
+
+			return result;
+
+		}
+
 		async function getAllQuipuStorageHistory() {
 
 			var lastId = 0;
@@ -390,11 +399,11 @@
 
 			if ( storageHistory.operation.parameter.entrypoint === "tezToTokenPayment" ) {
 
-				inner += "Bought UP for xxx ꜩ ( workin on it )";
+				inner += "Bought UP";
 
 			} else if ( storageHistory.operation.parameter.entrypoint === "tokenToTezPayment" ) {
 
-				inner += "Sold UP for xxx ꜩ ( workin on it )";
+				inner += "Sold UP";
 
 			}
 
@@ -404,8 +413,7 @@
 			var responseBalance = await fetch( "https://api.tzkt.io/v1/accounts/" + receiver + "/balance" );
 			var balanceData = await responseBalance.json();
 
-			inner += "Balance : " + format( ( balanceData / 1000000 ).toFixed( 2 ) ) + " ꜩ";
-			inner += "<br/>";
+			inner += "ꜩ in wallet : " + format( ( balanceData / 1000000 ).toFixed( 2 ) ) + " ꜩ";
 			inner += "<br/>";
 
 			// FROM UPI
@@ -415,25 +423,38 @@
 
 			inner += "UP in wallet : " + format( dataFromUPI.wallet[0].upamount ) + " UP ( " + format( ( dataFromUPI.wallet[0].upamount * currentPrice ).toFixed( 2 ) ) + " ꜩ )";
 			inner += "<br/>";
+			inner += "<br/>";
 
 			// TOTAL UPSORBED
 
 			var totalUpsorbed = 0;
+			var totalUnstakable = 0;
+
+			var now = Date.now();
 
 			for ( var i = 0; i < dataFromUPI.upsorbed.length; i++ ) {
 
 				totalUpsorbed += Number( dataFromUPI.upsorbed[i].amount );
 
+				// CHECK IF UNSTAKABLE
+
+				var unstakableDate = addDays( dataFromUPI.upsorbed[i].stake_key, dataFromUPI.upsorbed[i].duration );
+
+				if ( unstakableDate < now ) {
+
+					totalUnstakable += Number( dataFromUPI.upsorbed[i].amount );
+
+				}
+
 			}
 
 			var totalUpsorbedInTez = ( totalUpsorbed * currentPrice ).toFixed( 2 );
+			var totalUnstakableInTez = ( totalUnstakable * currentPrice ).toFixed( 2 );
 
-			inner += "Total upsorbed : " + format( totalUpsorbed ) + " UP ( " + format( totalUpsorbedInTez ) + " ꜩ )";
+			inner += "Currently upsorbed : " + format( totalUpsorbed ) + " UP ( " + format( totalUpsorbedInTez ) + " ꜩ )";
 			inner += "<br/>";
 
-			inner += "Unstakable : workin on it";
-			inner += "<br/>";
-			inner += "<br/>";
+			inner += "Currently unstakable : " + format( totalUnstakable ) + " UP ( " + format( totalUnstakableInTez ) + " ꜩ )";;
 
 			// 
 
