@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+	<title>UPSORBER CHART</title>
+
+	<style>
+
+		* {
+			font-family: Arial;
+		}
+
+		body {
+			height: 100vh;
+			background: #f9f9f9;
+		}
+
+		a:link, a:visited {
+
+			color: #008FFB;
+			text-decoration: none;
+
+		}
+
+		#chart, .chart-box {
+			padding-top: 20px;
+			padding-bottom: 20px;
+			padding-left: 10px;
+			background: #fff;
+			border: 1px solid #ddd;
+			box-shadow: 0 22px 35px -16px rgba(0,0,0, 0.1);
+		}
+
+		#infos {
+
+			max-width: 90%;
+			font-size: 16px;
+			margin: 2%;
+
+		}
+
+		#statics, #addresses, #profits {
+
+			float: left;
+			padding-left: 2%;
+			padding-right: 2%;
+			padding-bottom: 4%;
+			height:  auto;
+
+		}
+
+		select.flat-select {
+			-moz-appearance: none;
+			-webkit-appearance: none;
+			appearance: none;
+			background: #008FFB url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'60px\' height=\'60px\'><polyline fill=\'white\' points=\'46.139,15.518 25.166,36.49 4.193,15.519\'/></svg>") no-repeat scroll right 2px top 9px / 16px 16px;
+			border: 0 none;
+			border-radius: 3px;
+			color: #fff;
+			font-family: arial,tahoma;
+			font-size: 16px;
+			font-weight: bold;
+			outline: 0 none;
+			height: 33px;
+			padding: 5px 20px 5px 10px;
+			text-align: center;
+			text-indent: 0.01px;
+			text-overflow: "";
+			text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+			transition: all 0.3s ease 0s;
+			width: auto;
+			-webkit-transition: 0.3s ease all;
+			-moz-transition: 0.3s ease all;
+			-ms-transition: 0.3s ease all;
+			-o-transition: 0.3s ease all;
+			transition: 0.3s ease all;
+		}
+		
+		select.flat-select:focus, select.flat-select:hover {
+			border: 0;
+			outline: 0;
+		}
+
+		.apexcharts-canvas {
+			margin: 0 auto;
+		}
+
+		#html {
+			display: none;
+		}
+
+		#chart {
+			max-width: 94%;
+			margin: 35px auto;
+		}
+	  
+	</style>
+
+	<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+</head>
+
+<body>
+
+	<div id="chart"></div>
+	<div id="infos"><div id="statics"></div><div id="addresses"></div><div id="profits"></div></div>
+	
+
+	<script>
+
+		var options = {
+
+			chart: {
+
+				type: 'area', // area
+				stacked: false,
+				height: "50%",
+				zoom: { type: 'x', enabled: true, autoScaleYaxis: false },
+				toolbar: { autoSelected: 'zoom' },
+				animations: { enabled: false },
+				events: {
+
+					beforeResetZoom: function () { lastZoom = null; },
+					zoomed: function( chartContext, value ) { lastZoom = [ value.xaxis.min, value.xaxis.max ]; },
+					click: function( event, chartContext, config ) { onClickOnChart( config.dataPointIndex ); },
+
+				}
+
+			},
+			
+			dataLabels: { enabled: false },
+			markers: { size: 0 },
+			title: { text: 'Upsorber price', align: 'left' },
+			grid: { row: { colors: [ "#f3f3f3", "transparent" ], opacity: 0 } },
+			stroke: { show: true, curve: 'straight', lineCap: 'round', width: 2, dashArray: 0 },
+			yaxis: { title: { text: 'Price in ꜩ' }, max: function( max ) { return max * 1.06 } },
+			xaxis: { type: 'datetime' },
+			annotations: { yaxis: [{ y: currentPrice, borderColor: '#004f8b', label: { style: { color: '#004f8b' }, text: '', position: "left", textAnchor: "start", offsetX: 10 } }] },
+			tooltip: { intersect: false, shared: false }
+
+		};
+
+		var currentPrice, chart;
+
+		var allQuipuStorageHistory = [];
+
+		var lastZoom = null;
+
+		function sleep() {
+
+			return new Promise( ( resolve ) => {
+
+				setTimeout( resolve, 10 * 1000 );
+
+			});
+
+		}
+
+		function format( number ) {
+
+			return new Intl.NumberFormat().format( number );
+
+		}
+
+		async function getAllQuipuStorageHistory() {
+
+			var lastId = 0;
+
+			await getStorageHistory( lastId );
+
+			async function getStorageHistory( lastId ) {
+
+				var response = await fetch( "https://api.tzkt.io/v1/contracts/KT1V4jaZpCwhfitTnUucY1EHiRfz3bjqznAU/storage/history?&limit=1000&lastId=" + lastId );
+				var quipuData = await response.json();
+
+				if ( quipuData.length > 0 ) {
+
+					allQuipuStorageHistory = allQuipuStorageHistory.concat( quipuData );
+
+					var newLastId = quipuData[quipuData.length-1].id;
+
+					if ( newLastId !== lastId ) {
+
+						lastId = newLastId;
+
+						await getStorageHistory( lastId );
+
+					}
+
+				}
+
+			}
+
+			//allQuipuStorageHistory = [...new Set( allQuipuStorageHistory )]; // NOT NEEDED, NO DUPLICATES
+
+		}
+
+		async function updateQuipuStorageHistory() {
+
+			var response = await fetch( "https://api.tzkt.io/v1/contracts/KT1V4jaZpCwhfitTnUucY1EHiRfz3bjqznAU/storage/history?&limit=100" );
+			var quipuData = await response.json();
+
+			allQuipuStorageHistory = allQuipuStorageHistory.concat( quipuData );
+
+			allQuipuStorageHistory = [...new Set( allQuipuStorageHistory )];
+
+			allQuipuStorageHistory.sort( ( a, b ) => a.id - b.id );
+
+		}
+
+		function getPriceFromStorage( storage ) {
+
+			var price = storage.tez_pool / storage.token_pool / 1000000;
+
+			return price;
+
+		}
+
+		function getPriceHistoryFromStorageHistory() {
+
+			var priceHistory = [];
+
+			for ( var i = 0; i < allQuipuStorageHistory.length; i++ ) {
+
+				var price = getPriceFromStorage( allQuipuStorageHistory[i].value.storage );
+
+				if ( i === allQuipuStorageHistory.length - 1 ) {
+
+					currentPrice = price;
+
+				}
+
+				price = price.toFixed( 10 );
+				var time = allQuipuStorageHistory[i].timestamp;
+
+				var chartData = { x: time, y: price };
+
+				priceHistory.push( chartData );
+
+			}
+
+			return priceHistory;
+
+		}
+
+		async function initChart() {
+
+			await getAllQuipuStorageHistory();
+
+			var series = [];
+
+			var priceSerie = {};
+
+			priceSerie.name = "Price";
+			priceSerie.data = await getPriceHistoryFromStorageHistory();
+
+			options.annotations.yaxis[0].y = currentPrice;
+			options.annotations.yaxis[0].label.text = currentPrice.toFixed( 10 );
+
+			series.push( priceSerie );
+
+			// RENDER
+
+			console.log( "Will render..." );
+
+			options.series = series;
+
+			chart = new ApexCharts( document.querySelector( "#chart" ), options );
+			chart.render();
+
+			console.log( "Rendered" );
+
+			await updateChart();
+
+		}
+
+		async function updateChart() {
+
+			//console.log( "Will update" );
+
+			
+
+			await updateQuipuStorageHistory();
+
+			var priceHistory = await getPriceHistoryFromStorageHistory();
+
+			options.annotations.yaxis[0].y = currentPrice;
+			options.annotations.yaxis[0].label.text = currentPrice.toFixed( 10 );
+
+			chart.updateOptions({ series: [{ data: priceHistory }] });
+
+			if ( lastZoom !== null ) {
+
+				chart.zoomX( lastZoom[0], lastZoom[1] );
+
+			}
+
+			//console.log( "Updated" );
+
+			await logGeneralData();
+
+			await sleep();
+
+			await updateChart();
+
+		}
+
+		async function logGeneralData() {
+
+			// FROM UPI
+
+			var response = await fetch( "https://upi.upsorber.com/upsorbs" );
+			var data = await response.json();
+
+			var liqPoolResponse = await fetch( "https://upi.upsorber.com/liquidity" );
+			var liqPoolData = await liqPoolResponse.json();
+
+			var upLocked = data.up_locked;
+			var upLockedWithEmittable = data.up_locked_with_emittable;
+			var circulating = data.up_circulating;
+			var inLiqPool = liqPoolData.up_in_liqpool;
+
+			var total = upLockedWithEmittable + circulating;
+
+			// LOG INFO
+
+			var inner = "Circulating : " + format( circulating ) + " UP ( " + format( ( circulating * currentPrice ).toFixed( 2 ) ) + " ꜩ )";
+			inner += "<br/>";
+
+			inner += "Locked : " + format( upLocked ) + " UP ( " + format( ( upLocked * currentPrice ).toFixed( 2 ) ) + " ꜩ";
+			inner += "<br/>";
+
+			inner += "In liquidity pool : " + format( inLiqPool ) + " UP ( " + format( ( inLiqPool * currentPrice ).toFixed( 2 ) ) + " ꜩ )";
+			inner += "<br/>";
+			inner += "<br/>";
+
+			// PERCENTS
+
+			var percentCirculating = ( circulating * 100 ) / total;
+			var percentLocked = ( upLocked * 100 ) / total;
+			var percentInLiqPool = ( inLiqPool * 100 ) / total;
+
+			inner += "Circulating : " + ( percentCirculating ).toFixed( 2 ) + " %";
+			inner += "<br/>";
+			inner += "Locked : " + ( percentLocked ).toFixed( 2 ) + " %";
+			inner += "<br/>";
+			inner += "In liquidity pool : " + ( percentInLiqPool ).toFixed( 2 ) + " %";
+			inner += "<br/>";
+
+			// 
+
+			document.getElementById( "statics" ).innerHTML = inner;
+
+		}
+
+		async function onClickOnChart( dataPointIndex ) {
+
+			// Get the storage history from the timestamp clicked on the chart
+
+			var receiver = allQuipuStorageHistory[dataPointIndex].operation.parameter.value.receiver;
+
+			var hash = allQuipuStorageHistory[dataPointIndex].operation.hash;
+
+			var response = await fetch( "https://api.tzkt.io/v1/operations/transactions/" + hash );
+			var transactionData = await response.json();
+
+			if ( receiver[0] === "K" ) {
+
+				// The receiver is the address that initiate the transaction
+
+				receiver = transactionData[0].sender.address;
+
+			}
+
+			await logAddressData( dataPointIndex, receiver, hash, transactionData );
+
+		}
+
+		async function logAddressData( dataPointIndex, receiver, hash, transactionData ) {
+
+			var storageHistory = allQuipuStorageHistory[dataPointIndex];
+
+			// INNER HTML
+
+			var inner = "Address : <a href='https://tzkt.io/" + receiver + "' target='_blank'>" + receiver + "</a><br/>";
+
+			inner += "Transaction : <a href='https://tzkt.io/" + hash + "' target='_blank'>" + hash + "</a><br/>";
+
+			if ( storageHistory.operation.parameter.entrypoint === "tezToTokenPayment" ) {
+
+				inner += "Bought UP for xxx ꜩ ( workin on it )";
+
+			} else if ( storageHistory.operation.parameter.entrypoint === "tokenToTezPayment" ) {
+
+				inner += "Sold UP for xxx ꜩ ( workin on it )";
+
+			}
+
+			inner += "<br/>";
+			inner += "<br/>";
+
+			var responseBalance = await fetch( "https://api.tzkt.io/v1/accounts/" + receiver + "/balance" );
+			var balanceData = await responseBalance.json();
+
+			inner += "Balance : " + format( ( balanceData / 1000000 ).toFixed( 2 ) ) + " ꜩ";
+			inner += "<br/>";
+			inner += "<br/>";
+
+			// FROM UPI
+
+			var responseFromUPI = await fetch( "https://upi.upsorber.com/upsorbers/?address=" + receiver );
+			var dataFromUPI = await responseFromUPI.json();
+
+			inner += "UP in wallet : " + format( dataFromUPI.wallet[0].upamount ) + " UP ( " + format( ( dataFromUPI.wallet[0].upamount * currentPrice ).toFixed( 2 ) ) + " ꜩ )";
+			inner += "<br/>";
+
+			// TOTAL UPSORBED
+
+			var totalUpsorbed = 0;
+
+			for ( var i = 0; i < dataFromUPI.upsorbed.length; i++ ) {
+
+				totalUpsorbed += Number( dataFromUPI.upsorbed[i].amount );
+
+			}
+
+			var totalUpsorbedInTez = ( totalUpsorbed * currentPrice ).toFixed( 2 );
+
+			inner += "Total upsorbed : " + format( totalUpsorbed ) + " UP ( " + format( totalUpsorbedInTez ) + " ꜩ )";
+			inner += "<br/>";
+
+			inner += "Unstakable : workin on it";
+			inner += "<br/>";
+			inner += "<br/>";
+
+			// 
+
+			document.getElementById( "addresses" ).innerHTML = inner;
+
+		}
+
+		initChart();
+
+	</script>
+
+</body>
+</html>
