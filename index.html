@@ -4,20 +4,59 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<meta http-equiv="X-UA-Compatible" content="ie=edge" />
-	<title>UPSORBER CHART</title>
-	<link type="text/css" rel="stylesheet" href="style.css" />
+	<title>UPSORBER CHARTS</title>
 
-	<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-	<script src="js/chart.js"></script>
-	<script src="js/chartOptions.js"></script>
-	<script src="js/candles.js"></script>
+	<style>
+
+		.container {
+			height: 100px;
+			position: relative;
+		}
+
+		.center {
+			margin: 0;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			-ms-transform: translate(-50%, -50%);
+			transform: translate(-50%, -50%);
+		}
+
+		.button {
+			background-color: #056ccd;
+			border: none;
+			color: white;
+			padding: 15px 32px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 20px;
+			border-radius: 4px;
+		}
+
+	</style>
 
 </head>
 
 <body>
 
-	<div id="chart"></div>
-	<div id="infos"><div id="statics"></div><div id="addresses"></div><div id="profits"></div></div>
+<div class="container">
+	<div class="center">
+
+	</div>
+</div>
+
+<div class="container">
+	<div class="center">
+		<input type="button" class="button" onclick="location.href='linechart/index.html';" value="Line version" />
+	</div>
+</div>
+
+<div class="container">
+	<div class="center">
+		<input type="button" class="button" onclick="location.href='tradingview/index.html';" value="Tradingview version" />
+	</div>
+</div> 
 
 </body>
 </html>
