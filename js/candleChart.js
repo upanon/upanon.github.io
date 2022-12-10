@@ -1,11 +1,15 @@
 var chartContainer = document.getElementById( 'tradingviewContainer' );
 
 const chart = LightweightCharts.createChart( chartContainer );
+
+var greenColor = "#4bffb5";
+var redColor = "#ff4976";
+
 const candlestickSeries = chart.addCandlestickSeries({
-	downColor: "#4bffb5",
-	upColor: "#ff4976",
-	borderUpColor: "#ff4976",
-	borderDownColor: "#4bffb5",
+	downColor: redColor,
+	upColor: greenColor,
+	borderUpColor: greenColor,
+	borderDownColor: redColor,
 	wickDownColor: "#838ca1",
 	wickUpColor: "#838ca1"
 });
@@ -20,9 +24,11 @@ chart.applyOptions({
 	layout: { backgroundColor: "#1c283d", textColor: "#DDDDDD" },
 	grid: { vertLines: { color: "#334158" }, horzLines: { color: "#334158" } },
 	priceScale: { borderColor: "#485c7b" },
-	timeScale: { borderColor: "#485158" }
+	timeScale: { borderColor: "#485158", timeVisible: true, secondsVisible: false }
 
  });
+
+var currentChartData = [];
 
 var resizeChart = function() {
 
@@ -42,11 +48,13 @@ async function initChart() {
 
 	var candles = convertToCandle( tickData );
 
+	currentChartData = candles;
+
 	candlestickSeries.setData( candles );
 
 	chart.timeScale().fitContent();
 
-	await updateChartLoop();
+	//await updateChartLoop();
 
 }
 
@@ -58,7 +66,19 @@ async function updateChart() {
 
 	var candles = convertToCandle( tickData );
 
-	//candlestickSeries.setData( candles );
+	var lastCandle = candles[0];
+
+	for ( var i = 0; i < candles.length; i++ ) {
+
+		if ( candles[i].time >= lastCandle.time ) {
+
+			candlestickSeries.update( candles[i] );
+
+		}
+
+	}
+
+	currentChartData = candles;
 
 }
 
